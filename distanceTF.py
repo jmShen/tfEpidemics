@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-
+import coordinate as cr
 def tfDistance(coordinate):
     '''
 
@@ -22,16 +22,15 @@ def tfDistanceLowMemory(coordinate):
     D=tf.map_fn(lambda i: tf.reduce_sum(tf.sqrt(tf.reduce_sum(tf.pow(i-x,2),1))),x)
     return D
 
-def Distance(Coordinate):
+def Distance(coordinate):
     lmModel = tfDistance(coordinate)
     # lmModel=tfDistanceLowMemory(coordinate)
     init = tf.initialize_all_variables()
     with tf.Session() as sess:
         sess.run(init)
         lmModel = sess.run(lmModel)
-        print (lmModel - cr.DistanceMatrix(coordinate))
+        return lmModel
 
 if __name__ == "__main__":
-    import coordinate as cr
     coordinate=cr.geodata(100)
-    Distance(coordinate)
+    print Distance(coordinate)
