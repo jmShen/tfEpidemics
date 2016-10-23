@@ -21,16 +21,25 @@ def tfDistanceLowMemory(coordinate):
     x = tf.constant(coordinate)
     D=tf.map_fn(lambda i: tf.reduce_sum(tf.sqrt(tf.reduce_sum(tf.pow(i-x,2),1))),x)
     return D
-
-def Distance(coordinate):
-    lmModel = tfDistance(coordinate)
-    # lmModel=tfDistanceLowMemory(coordinate)
+def tfrunning(lmModel):
     init = tf.initialize_all_variables()
     with tf.Session() as sess:
         sess.run(init)
         lmModel = sess.run(lmModel)
         return lmModel
+def Distance(coordinate):
+    lmModel = tfDistance(coordinate)
+    # lmModel=tfDistanceLowMemory(coordinate)
+    lmModel=tfrunning(lmModel)
+    return lmModel
+def DistanceLowMemory(coordinate):
+    lmModel=tfDistanceLowMemory(coordinate)
+    lmModel=tfrunning(lmModel)
+    return lmModel
+
 
 if __name__ == "__main__":
     coordinate=cr.geodata(100)
+    #a=DistanceLowMemory(coordinate)
+    #print(a.__sizeof__())
     print Distance(coordinate)
