@@ -38,16 +38,57 @@ def tfTransformOneColumn(state,BetaMatrix,gamma):
     state=np.array(state)
     num_people=np.size(state)
     stateTf=tf.constant(state)
-    probInfectTF=tf.variable(tf.zeros([num_people,1]),name="Infprob")
+    probInfectTF=tf.Variable(tf.zeros([num_people,1]),name="Infprob")
+    update0=tf.to_double(probInfectTF)
+
+    # probInfect[state == 0] = BetaMatrix[:, state == 1].sum(1)[state == 0]
+    # There is no boolean index in tensorflow yet, issue #206 and #4639
+
+    #So we first get the index about the element equals to "1" and "0" in the state
     booleanIndexOfInfect = tf.equal(state, 1) #The state which equals to "1"=infected, one ops
     InfectIndex = tf.where(booleanIndexOfInfect)#The index about the infected, one ops
     init=tf.initialize_all_variables()
-    with tf.Session as sess:
+    with tf.Session() as sess:
         sess.run(init)
         InfectTensor=sess.run(InfectIndex)
+    #Compute the state=1 index
+
+    booleanIndexOfSuscep = tf.equal(state, 0) #The state which equals to "0"=Susceptible, one ops
+    SuscepIndex = tf.where(booleanIndexOfSuscep)#The index about the infected, one ops
+    init=tf.initialize_all_variables()
+    with tf.Session() as sess:
+        sess.run(init)
+        SuscepTensor=sess.run(SuscepIndex)
+    #Compute the state=0 index
+
+    #Now we got the index of susceptible individuals and infected individuals
+    #Then we will slice the BetaMatrix to get cumulative infection intensity
+    updateInfectIntensity=tf.reduce_sum(tf.convert_to_tensor(BetaMatrix[InfectTensor,SuscepTensor]),0)
+    updateInfectIntensity=tf.to_float(updateInfectIntensity)
+    Update1=tf.scatter_update(probInfectTF,SuscepIndex,updateInfectIntensity)
+
     Removal=np.exp(-gamma)*np.ones(InfectTensor.shape)
-    update=tf.scatter_update(probInfectTF,InfectIndex,Removal)
+    Update2=tf.scatter_update(probInfectTF,InfectIndex,Removal)
     init = tf.initialize_all_variables()
     with tf.Session as sess:
         sess.run(init)
-        InfectTensor=sess.run(InfectIndex)
+        sess.run(update0)
+        sess.run(Update1)
+        sess.run(Update2)
+        print(probInfectTF)
+
+if __name__=="__main__":
+    import tensorflow as tf
+    import numpy as np
+    import distanceTF as dt
+    import coordinate as cr
+    import BetaMatrix as bt
+
+    coordinate = cr.geodata(3)  # Generate the coordinate
+    a = dt.Distance(coordinate)  # distance matrix
+    b = bt.tfBetaRunning(bt.tfBetaMatrix(a, [0.3, 0.1], bt.exponentialKernel))  # BetaMatrix for testing\
+    # 3 people in testing
+    state = np.array([1, 0, 0])
+    tfState = tf.constant(state)
+
+    tfTransformOneColumn(np.array([1, 0, 0]), b, 0.3)
